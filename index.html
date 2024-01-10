@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 
 <head>
+    <title>Telephone</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <script>
         function setup() {
             const synth = window.speechSynthesis;
@@ -11,9 +13,9 @@
             recognition.interimResults = false;
             recognition.continuous = true;
             recognition.maxAlternatives = 1;
-            
+
             const inputForm = document.querySelector("form");
-            const inputTxt = document.querySelector(".txt");
+            const inputTxt = document.querySelector("#txt");
             const voiceSelect = document.querySelector("select");
             const pitch = document.querySelector("#pitch");
             const pitchValue = document.querySelector(".pitch-value");
@@ -22,6 +24,7 @@
             const heard = document.querySelector('#heard')
             const rounds = document.querySelector("#rounds")
             let voices = [];
+            let listening = false
 
             function populateVoiceList() {
                 voices = synth.getVoices();
@@ -54,8 +57,12 @@
                 const utterThis = new SpeechSynthesisUtterance(txt);
                 utterThis.addEventListener('start', (e) => {
                     heard.value = ""
+                    listening = true
                 })
-                utterThis.addEventListener('end', then)
+                utterThis.addEventListener('end', (e) => {
+                    listening = false;
+                    then(e)
+                })
                 const selectedOption =
                     voiceSelect.selectedOptions[0].getAttribute("data-name");
                 for (let i = 0; i < voices.length; i++) {
@@ -93,31 +100,36 @@
 
 <body>
     <form>
-        <div>
-            <label for="txt">Enter seed text</label>
-            <input id="txt" type="text" class="txt" value="Hello world!"/>
-        </div>
-        <div>
-            <label for="rounds">Enter number of rounds</label>
-            <input id="rounds" type="text" value="5"/>
-        </div>
-        <div>
-            <label for="rate">Rate</label><input type="range" min="0.5" max="2" value="1" step="0.1" id="rate" />
-            <div class="rate-value">1</div>
-            <div class="clearfix"></div>
-        </div>
-        <div>
-            <label for="pitch">Pitch</label><input type="range" min="0" max="2" value="1" step="0.1" id="pitch" />
-            <div class="pitch-value">1</div>
-            <div class="clearfix"></div>
-        </div>
-        <select></select>
-        <div class="controls">
-            <button id="play" type="submit">Play</button>
+        <div class="container mt-4">
+            <form>
+                <div class="form-group">
+                    <label for="txt">Enter seed text</label>
+                    <input id="txt" type="text" class="form-control" value="Hello world!" />
+                </div>
+                <div class="form-group">
+                    <label for="rounds">Enter number of rounds</label>
+                    <input id="rounds" type="text" class="form-control" value="5" />
+                </div>
+                <div class="form-group">
+                    <label for="rate">Rate</label>
+                    <input type="range" class="custom-range" min="0.5" max="2" value="1" step="0.1" id="rate" />
+                    <div id="rate-value" class="text-center">1</div>
+                </div>
+                <div class="form-group">
+                    <label for="pitch">Pitch</label>
+                    <input type="range" class="custom-range" min="0" max="2" value="1" step="0.1" id="pitch" />
+                    <div id="pitch-value" class="text-center">1</div>
+                </div>
+                <div class="form-group">
+                    <label>Voice Select</label>
+                    <select class="form-control"></select>
+                </div>
+                <button id="play" type="submit" class="btn btn-primary">Play</button>
+            </form>
+            <div class="form-group mt-3">
+                <label for="heard">Heard:</label>
+                <input id="heard" type="text" class="form-control" />
+            </div>
         </div>
     </form>
-    <label for="heard">Heard:</label>
-    <input id="heard" type="text" />
-
-
 </body>
