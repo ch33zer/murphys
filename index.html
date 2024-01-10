@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+
+<head>
+    <script>
+        function setup() {
+            const synth = window.speechSynthesis;
+            const DELAY = 5000;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = "en-US";
+            recognition.interimResults = false;
+            recognition.continuous = true;
+            recognition.maxAlternatives = 1;
+            
+            const inputForm = document.querySelector("form");
+            const inputTxt = document.querySelector(".txt");
+            const voiceSelect = document.querySelector("select");
+            const pitch = document.querySelector("#pitch");
+            const pitchValue = document.querySelector(".pitch-value");
+            const rate = document.querySelector("#rate");
+            const rateValue = document.querySelector(".rate-value");
+            const heard = document.querySelector('#heard')
+            const rounds = document.querySelector("#rounds")
+            let voices = [];
+
+            function populateVoiceList() {
+                voices = synth.getVoices();
+
+                for (let i = 0; i < voices.length; i++) {
+                    const option = document.createElement("option");
+                    option.textContent = `${voices[i].name} (${voices[i].lang})`;
+
+                    if (voices[i].default) {
+                        option.textContent += " — DEFAULT";
+                    }
+
+                    option.setAttribute("data-lang", voices[i].lang);
+                    option.setAttribute("data-name", voices[i].name);
+                    voiceSelect.appendChild(option);
+                }
+            }
+
+            populateVoiceList();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = populateVoiceList;
+            }
+
+            recognition.addEventListener('result', (e) => {
+                console.log(e)
+                heard.value += e.results[e.resultIndex][0].transcript
+            })
+            recognition.start();
+            function say(txt, then) {
+                const utterThis = new SpeechSynthesisUtterance(txt);
+                utterThis.addEventListener('start', (e) => {
+                    heard.value = ""
+                })
+                utterThis.addEventListener('end', then)
+                const selectedOption =
+                    voiceSelect.selectedOptions[0].getAttribute("data-name");
+                for (let i = 0; i < voices.length; i++) {
+                    if (voices[i].name === selectedOption) {
+                        utterThis.voice = voices[i];
+                    }
+                }
+                utterThis.pitch = pitch.value;
+                utterThis.rate = rate.value;
+                synth.speak(utterThis);
+            }
+            function runround(txt, numrounds) {
+                console.log('runround', txt, numrounds)
+                if (numrounds == 0) {
+                    return
+                }
+                say(txt, (e) => {
+                    setTimeout(() => {
+                        const newtxt = heard.value;
+                        runround(newtxt, numrounds - 1)
+                    }, DELAY)
+                })
+            }
+            inputForm.onsubmit = (event) => {
+                event.preventDefault();
+                let curr = inputTxt.value;
+                const numrounds = parseInt(rounds.value)
+                runround(curr, numrounds)
+                inputTxt.blur();
+            };
+        }
+        window.addEventListener('load', setup)
+    </script>
+</head>
+
+<body>
+    <form>
+        <div>
+            <label for="txt">Enter seed text</label>
+            <input id="txt" type="text" class="txt" value="Hello world!"/>
+        </div>
+        <div>
+            <label for="rounds">Enter number of rounds</label>
+            <input id="rounds" type="text" value="5"/>
+        </div>
+        <div>
+            <label for="rate">Rate</label><input type="range" min="0.5" max="2" value="1" step="0.1" id="rate" />
+            <div class="rate-value">1</div>
+            <div class="clearfix"></div>
+        </div>
+        <div>
+            <label for="pitch">Pitch</label><input type="range" min="0" max="2" value="1" step="0.1" id="pitch" />
+            <div class="pitch-value">1</div>
+            <div class="clearfix"></div>
+        </div>
+        <select></select>
+        <div class="controls">
+            <button id="play" type="submit">Play</button>
+        </div>
+    </form>
+    <label for="heard">Heard:</label>
+    <input id="heard" type="text" />
+
+
+</body>
