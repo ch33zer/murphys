@@ -2,7 +2,7 @@
 
 <head>
     <title>Telephone</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
     <style>
@@ -12,8 +12,6 @@
         }
     </style>
     <script>
-        let listening = false;
-        let recognition;
         function setup() {
             const synth = window.speechSynthesis;
             let voice = null;
@@ -28,10 +26,10 @@
                 throw "Unable to find default voice"
             };
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
+            const recognition = new SpeechRecognition();
             recognition.lang = "en-US";
             recognition.interimResults = false;
-            recognition.continuous = true;
+            recognition.continuous = false;
             recognition.maxAlternatives = 1;
             for (const eventtype of ['audiostart', 'audioend', 'end', 'error', 'nomatch', 'result', 'soundstart', 'soundend', 'speechstart', 'speechend', 'start']) {
                 recognition.addEventListener(eventtype, (e) => {
@@ -43,12 +41,15 @@
             const startButton = document.querySelector("#startButton");
             const welcomeScreen = document.querySelector("#welcome")
             const listenScreen = document.querySelector("#listen")
+            const speakScreen = document.querySelector("#speak")
+            const seedPhrase = document.querySelector("#seedPhrase")
+            const startForm = document.querySelector("#startForm")
+            const heardText = document.querySelector("#heardText")
+
             function listen() {
-                listening = true;
                 return new Promise((resolve, reject) => {
                     console.log("Listen promise")
                     function removeAllListeners() {
-                        listening = false;
                         recognition.removeEventListener('result', listenResultCb);
                         recognition.removeEventListener('error', listenErrorCb);
                         recognition.removeEventListener('nomatch', listenMatchCb);
@@ -91,28 +92,47 @@
                 });
             }
             function getRecognition(recognitionEvent) {
-                return recognitionEvent.results[recognitionEvent.resultIndex][0].transcript.trim()
+                return recognitionEvent.results[recognitionEvent.resultIndex][0].transcript.trim
             }
             async function runFor(txt, rounds) {
                 for (let i = 0; i < rounds; i++) {
                     console.log(i, "Pre-promise")
-                    await Promise.all([wait(1000).then(() => say(txt)), listen()]).then((res) => {
-                        console.log("Got back", res)
-                        const [ignore, newtxt] = res
+                    recognition.stop()
+                    await wait(400)
+                    recognition.start()
+                    await wait(400)
+
+                    const sayP = wait(1000).then(() => {
+                        heardText.textContent = txt
+                        speakScreen.hidden = false
+                        listenScreen.hidden = true
+                        return say(txt)
+                    }).then(() => {
+                        speakScreen.hidden = true
+                        listenScreen.hidden = false
+                    });
+                    const listenP = listen().then((newtxt) => {
+                        console.log("Got back", newtxt)
                         if (newtxt.length != 0) {
                             txt = newtxt;
                         }
                     })
+                    await Promise.all([sayP, listenP])
+
                     // Things just seem to work better if we give the API more time to react...
                     console.log(i, "Waiting post resolution")
                     await wait(1000)
                 }
             }
-            document.querySelector("#startButton").onclick = () => {
-                listenScreen.hidden = false
-                welcomeScreen.hidden = true
-                listen().then((text) => runFor(text, 5))
-            }
+            startButton.addEventListener('click', (e) => {
+                if (startForm.checkValidity()) {
+                    e.preventDefault()
+                    welcomeScreen.hidden = true
+                    speakScreen.hidden = false
+                    heardText.textContent = seedPhrase.value
+                    runFor(seedPhrase.value, 5)
+                }
+            })
         }
         window.addEventListener('load', setup)
     </script>
@@ -125,25 +145,31 @@
                 <i class="bi bi-mic" style="font-size: 300px;"></i>
             </div>
         </div>
-        <div class="row">
-            <div class="col">
-                <p>Let's play telephone! On the next page say a phrase. You voice will be routed through your browser's
-                    speech to text engine, then through your browsers text to speech engine over the speakers, then
+        <div class="row justify-content-center">
+            <div class="col-10">
+                <p>Let's play telephone! Enter a starting phrase below. That phrase will be routed through your
+                    browser's
+                    text to speech engine over the speakers, which will be routed through your browsers speech to text
+                    engine, then
                     through your browsers
-                    speech to text engine, etc. This will happen 5 times. You can either let it play out or you can
+                    text to speech engine, etc. This will happen 5 times. You can either let it play out or you can
                     interfere by making noise while the text is being spoken. Make sure to accept the microphone
                     permission prompt from your browser above and unplug your headphones so the mic can pick up the
                     audio.</p>
             </div>
         </div>
-        <div class="row">
-            <div class="col">
-                <button id="startButton" type="button" class="btn btn-primary">
-                    Continue
-                    <i class="bi bi-arrow-right"></i>
-                </button>
+        <form id="startForm" class="row g-3 justify-content-center">
+            <div class="col-6">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="seedPhrase" size="50"
+                        placeholder="Enter the message to kick off Telephone!" required>
+                    <button id="startButton" type="submit" class="btn btn-primary">
+                        Continue
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
     <div id="listen" class="container mt-3 text-center" hidden>
         <div class="row">
@@ -153,19 +179,11 @@
         </div>
         <div class="row">
             <div class="col">
-                <p>Speak now!</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <button id="startButton" type="button" class="btn btn-primary">
-                    Continue
-                    <i class="bi bi-arrow-right"></i>
-                </button>
+                <p>Transcribing text. Pssst, this is where you can make noise and confuse the model!</p>
             </div>
         </div>
     </div>
-    <div id="speak" class="container mt-3" hidden>
+    <div id="speak" class="container mt-3 text-center" hidden>
         <div class="row">
             <div class="col">
                 <i class="bi bi-chat-text" style="font-size: 300px;"></i>
@@ -174,11 +192,6 @@
         <div class="row">
             <div class="col">
                 <p>I heard: <b id="heardText"></b></p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <p>Speak now!</p>
             </div>
         </div>
     </div>
