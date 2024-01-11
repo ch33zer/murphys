@@ -92,7 +92,7 @@
                 });
             }
             function getRecognition(recognitionEvent) {
-                return recognitionEvent.results[recognitionEvent.resultIndex][0].transcript.trim
+                return recognitionEvent.results[recognitionEvent.resultIndex][0].transcript.trim()
             }
             async function runFor(txt, rounds) {
                 for (let i = 0; i < rounds; i++) {
