@@ -97,10 +97,13 @@
             async function runFor(txt, rounds) {
                 for (let i = 0; i < rounds; i++) {
                     console.log(i, "Pre-promise")
+                    console.log("Stopping")
                     recognition.stop()
                     await wait(400)
+                    console.log("Starting")
                     recognition.start()
                     await wait(400)
+                    console.log("proceeding")
 
                     const sayP = wait(1000).then(() => {
                         heardText.textContent = txt
